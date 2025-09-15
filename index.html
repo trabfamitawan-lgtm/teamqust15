@@ -301,11 +301,28 @@ renderTopControls();
 /* ---------- Render router by role ---------- */
 function renderByRole(){
   const s = LS('cb_sessions');
-  // hide all dash
-  $('empDash').hidden = true; $('mgrDash').hidden = true;
-  if(!s) return;
-  if(s.role.toLowerCase()==='manager'){ renderManager(); } else { renderEmployee(); }
-}
+        // hide all dash
+        $('empDash').hidden = true;
+        $('mgrDash').hidden = true;
+
+        // **แก้ไข: เพิ่มการแสดงผล card ของลูกค้าด้วย**
+        $('customerCard').hidden = false;
+        $('loginCard').hidden = false;
+
+        if (!s) {
+            return;
+        }
+
+        // **แก้ไข: เพิ่มการซ่อน card ของลูกค้าเมื่อล็อกอินแล้ว**
+        $('customerCard').hidden = true;
+        $('loginCard').hidden = true;
+
+        if (s.role.toLowerCase() === 'manager') {
+            renderManager();
+        } else {
+            renderEmployee();
+        }
+    }
 
 /* ---------- Employee functions ---------- */
 function renderEmployee(){
@@ -415,17 +432,26 @@ $('btnCheckOut').addEventListener('click', ()=>{
   renderByRole();
 });
 
-/* Check-in just notes presence in payroll (we register one checkin per day) */
-$('btnCheckIn').addEventListener('click', ()=>{
-  const s = LS('cb_sessions'); if(!s) { toast('ล็อกอินก่อน'); return; }
-  // record payroll day
-  const payroll = LS('cb_payroll') || {};
-  const key = `${s.id}_${ new Date().toISOString().slice(0,10) }`;
-  payroll[key] = { empId: s.id, date: new Date().toLocaleDateString('th-TH'), time: nowStr() };
-  LS('cb_payroll', payroll);
-  toast('เช็คอินบันทึกแล้ว (ถูกนับเป็นวันจ้าง)');
-  renderEmployee();
-});
+ /* Check-in just notes presence in payroll (we register one checkin per day) */
+    $('btnCheckIn').addEventListener('click', () => {
+        const s = LS('cb_sessions');
+        if (!s) {
+            toast('ล็อกอินก่อน');
+            return;
+        }
+        // record payroll day
+        const payroll = LS('cb_payroll') || {};
+        const key = `${s.id}_${new Date().toISOString().slice(0, 10)}`;
+        payroll[key] = {
+            empId: s.id,
+            date: new Date().toLocaleDateString('th-TH'),
+            time: nowStr()
+        };
+        LS('cb_payroll', payroll);
+        toast('เช็คอินบันทึกแล้ว (ถูกนับเป็นวันจ้าง)');
+        // **แก้ไข: เรียก renderEmployee() ที่นี่เพื่ออัปเดตหน้าจอทันที**
+        renderEmployee();
+    });
 
 /* ---------- Customer Orders ---------- */
 $('btnPlaceOrder').addEventListener('click', ()=>{
