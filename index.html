@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Cafe Family • ระบบสั่งงาน+Order+Payroll (Demo)</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--muted:#556;--brand:#2673e6;--ok:#16a34a;--warn:#f59e0b;--line:#e6eefb}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,"Noto Sans Thai",sans-serif;background:var(--bg);color:#0b1220}
+.container{max-width:1200px;margin:18px auto;padding:12px}
+.header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.logo{display:flex;gap:8px;align-items:center}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;box-shadow:0 6px 18px rgba(6,12,24,0.04)}
+.grid{display:grid;grid-template-columns:320px 1fr;gap:12px;margin-top:12px}
+@media (max-width:980px){.grid{grid-template-columns:1fr}}
+input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:#fff}
+button{padding:8px 10px;border-radius:8px;border:0;background:var(--brand);color:#fff;cursor:pointer}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:inherit}
+.small{font-size:13px;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hr{height:1px;background:var(--line);margin:10px 0;border-radius:2px}
+.task{border:1px solid var(--line);padding:8px;border-radius:8px;background:#fbfdff;margin-bottom:8px}
+.log{max-height:280px;overflow:auto;padding:8px;border-radius:8px;border:1px dashed var(--line);background:#fff}
+.kpi{display:flex;gap:8px}
+.kpi .ibox{flex:1;padding:8px;background:#fff;border:1px solid var(--line);border-radius:8px}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef6ff;border:1px solid var(--line);font-size:13px}
+.link{color:var(--brand);text-decoration:underline;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">
+      <div style="width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#7fb3ff);display:grid;place-items:center;color:#fff;font-weight:800">CB</div>
+      <div>
+        <div style="font-weight:800">Cafe Family System (Demo)</div>
+        <div class="small">ล็อกอินผ่าน Wi-Fi gated (approx) • พนักงาน/หัวหน้า/ลูกค้า</div>
+      </div>
+    </div>
+    <div id="topControls" class="row"></div>
+  </div>
+
+  <div class="grid">
+    <!-- left column: login / network / customer -->
+    <div>
+      <div id="loginCard" class="card">
+        <h3>Login (Employee)</h3>
+        <div class="small">ทดสอบ network gating: ใส่ Local token URL หรือ Public IP list</div>
+        <div style="margin-top:8px">
+          <label class="small">Local token URL (ถ้ามี)</label>
+          <input id="localTokenUrl" placeholder="เช่น http://192.168.50.10/ping">
+          <label class="small" style="margin-top:6px">Allowed Public IP/CIDR (คั่นด้วย ,)</label>
+          <input id="allowedPublic" placeholder="เช่น 203.0.113.0/24,198.51.100.14">
+          <div class="row" style="margin-top:8px">
+            <button id="btnNetTest">ทดสอบเครือข่าย</button>
+            <button id="btnSeed" class="btn-ghost">เติมข้อมูลตัวอย่าง</button>
+            <button id="btnClear" class="btn-ghost">ล้างข้อมูล (local)</button>
+          </div>
+          <div id="netResult" class="small" style="margin-top:8px"></div>
+        </div>
+
+        <div class="hr"></div>
+        <div>
+          <label class="small">Employee ID</label>
+          <select id="empSelect"></select>
+          <label class="small" style="margin-top:6px">Password</label>
+          <input id="empPw" type="password" placeholder="รหัสตัวอย่าง: 1111,2222,3333,MGR">
+          <div class="row" style="margin-top:8px">
+            <button id="btnLogin">Login</button>
+            <button id="btnCustomerPage" class="btn-ghost">ไปหน้า ลูกค้า (Order)</button>
+          </div>
+          <div id="loginMsg" class="small" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" id="customerCard" class="card">
+        <h3>หน้าเพจลูกค้า (สั่งเมนู)</h3>
+        <div class="small">ลูกค้าสามารถสั่งเมนู — จะสร้าง Order และมอบหมายเป็นงานให้ Barista/Kitchen</div>
+        <div style="margin-top:8px">
+          <label class="small">ชื่อลูกค้า (ไม่บังคับ)</label>
+          <input id="custName" placeholder="ชื่อลูกค้า">
+          <label class="small" style="margin-top:6px">เลือกเมนู / รายการ</label>
+          <select id="menuSelect">
+            <option value="Cappuccino">Cappuccino - Barista</option>
+            <option value="Latte">Latte - Barista</option>
+            <option value="Espresso">Espresso - Barista</option>
+            <option value="Cake">Cake - Kitchen</option>
+            <option value="Sandwich">Sandwich - Kitchen</option>
+          </select>
+          <label class="small" style="margin-top:6px">จำนวน</label>
+          <input id="menuQty" type="number" value="1" min="1">
+          <div class="row" style="margin-top:8px">
+            <button id="btnPlaceOrder">สั่งซื้อ & สร้างงาน</button>
+            <button id="btnViewOrders" class="btn-ghost">ดู Orders (admin)</button>
+          </div>
+          <div id="orderMsg" class="small" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" id="ordersCard" class="card" hidden>
+        <h3>Orders (All)</h3>
+        <div id="ordersList" class="log"></div>
+        <div class="row" style="margin-top:8px"><button id="btnHideOrders" class="btn-ghost">ปิด</button></div>
+      </div>
+    </div>
+
+    <!-- right column: dashboards -->
+    <div>
+      <!-- Employee Dashboard -->
+      <div id="empDash" class="card" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:800" id="empTitle">พนักงาน</div>
+            <div class="small" id="empSub">ตำแหน่ง • วันนี้</div>
+          </div>
+          <div class="row">
+            <div id="empNetwork" class="small"></div>
+            <button id="btnLogout" class="btn-ghost">Logout</button>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="row" style="gap:12px;align-items:center">
+          <button id="btnCheckIn">Check-in</button>
+          <button id="btnCheckOut" class="btn-ghost">Check-out</button>
+          <div class="small">สถานะ: <span id="checkStatus">ไม่ได้เช็คอิน</span></div>
+        </div>
+
+        <div class="hr"></div>
+        <h4>วันนี้: <span id="todayStr"></span></h4>
+
+        <h4>เป้าหมายประจำวัน (จากหัวหน้า)</h4>
+        <div id="dailyGoals" class="task"></div>
+
+        <h4 style="margin-top:8px">งานของฉัน (รวม Order ที่มอบหมาย)</h4>
+        <div id="myTasks" class="log"></div>
+
+        <h4 style="margin-top:8px">บันทึก / สรุปงาน (จะส่งเมื่อ Check-out)</h4>
+        <textarea id="workNotes" placeholder="บันทึกงานวันนี้..."></textarea>
+        <div class="row" style="margin-top:8px">
+          <button id="btnSaveNote" class="btn-ghost">บันทึกชั่วคราว</button>
+        </div>
+
+        <div class="hr"></div>
+        <h4>ผลประเมินจากหัวหน้า</h4>
+        <div id="myFeedback" class="log"></div>
+
+        <div class="hr"></div>
+        <h4>สรุปเงินเดือน (เดือนนี้)</h4>
+        <div id="payrollBox" class="task"></div>
+      </div>
+
+      <!-- Manager Dashboard -->
+      <div id="mgrDash" class="card" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:800">หัวหน้า</div>
+            <div class="small" id="mgrSub">Inbox / Manage goals & payroll</div>
+          </div>
+          <div class="row">
+            <button id="btnMgrLogout" class="btn-ghost">Logout</button>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+        <h4>Inbox รายงานจากพนักงาน (Check-out ที่ส่งมา)</h4>
+        <div id="reportsInbox" class="log"></div>
+
+        <div class="hr"></div>
+        <h4>เป้าหมายประจำวันที่แก้ไข (ปรากฎใต้รายงานของแต่ละพนักงาน)</h4>
+        <div id="manageGoals" class="log"></div>
+
+        <div class="hr"></div>
+        <h4>การประเมิน & ส่ง Feedback</h4>
+        <div id="evalPanel"></div>
+
+        <div class="hr"></div>
+        <h4>Payroll / สรุปรายเดือน</h4>
+        <div id="payrollAdmin" class="log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =================== Demo app (single-file) ===================
+ - client-only. Storage via localStorage for demo.
+ - Keys used:
+   cb_users, cb_settings, cb_session, cb_tasks, cb_orders, cb_reports, cb_feedback, cb_payroll
+ - roles: 'Barista','Kitchen','Host','Manager'
+ - daily wage default 200
+================================================================*/
+
+/* ---------- Helpers ---------- */
+const $ = id => document.getElementById(id);
+const LS = (k,v) => v===undefined ? JSON.parse(localStorage.getItem(k)||'null') : localStorage.setItem(k, JSON.stringify(v));
+const todayDisplay = ()=> new Date().toLocaleDateString('th-TH',{weekday:'long', year:'numeric', month:'long', day:'numeric'});
+const nowStr = ()=> new Date().toLocaleTimeString('th-TH');
+const firstOfMonth = ()=> { const d=new Date(); d.setDate(1); d.setHours(0,0,0,0); return d };
+function toast(msg){ const t=document.createElement('div'); t.textContent=msg; Object.assign(t.style,{position:'fixed',right:12,bottom:12,background:'#0b122b',color:'#fff',padding:'8px 10px',borderRadius:8,zIndex:9999}); document.body.appendChild(t); setTimeout(()=>t.remove(),1600); }
+
+/* ---------- Seed data ---------- */
+function seed(){
+  if(!LS('cb_users')){
+    LS('cb_users', [
+      {id:'E001', pw:'1111', name:'Mai', role:'Barista', dailyWage:200},
+      {id:'E002', pw:'2222', name:'Nok', role:'Host', dailyWage:200},
+      {id:'E003', pw:'3333', name:'Ton', role:'Kitchen', dailyWage:200},
+      {id:'M001', pw:'MGR',  name:'Boss', role:'Manager', dailyWage:0}
+    ]);
+  }
+  if(!LS('cb_settings')) LS('cb_settings', { localTokenUrl:'', allowedPublic:'' });
+  if(!LS('cb_tasks')) LS('cb_tasks', []); // tasks per employee (created by manager or orders)
+  if(!LS('cb_orders')) LS('cb_orders', []); // orders placed by customers
+  if(!LS('cb_reports')) LS('cb_reports', []); // reports sent on checkout
+  if(!LS('cb_feedback')) LS('cb_feedback', {}); // feedback per empId array
+  if(!LS('cb_sessions')) LS('cb_sessions', null);
+  if(!LS('cb_goalOverrides')) LS('cb_goalOverrides', {}); // { empId: {date: 'dd', goals: '...' } }
+}
+seed();
+
+/* ---------- UI init ---------- */
+function populateUserSelect(){
+  const sel = $('empSelect'); sel.innerHTML='';
+  const users = LS('cb_users')||[];
+  users.forEach(u => sel.appendChild(new Option(`${u.name} (${u.id}) - ${u.role}`, u.id)));
+}
+populateUserSelect();
+
+/* ---------- Network gating (approx) ---------- */
+async function tryLocalToken(url){
+  if(!url) return {ok:false, err:'no-url'};
+  try{
+    // no-cors fetch returns success if no network error
+    await new Promise((res,rej)=> {
+      const id = setTimeout(()=>rej(new Error('timeout')),2500);
+      fetch(url,{mode:'no-cors'}).then(()=>{clearTimeout(id);res(true)}).catch(e=>{clearTimeout(id);rej(e)});
+    });
+    return {ok:true};
+  }catch(e){ return {ok:false, err: e.message || String(e)}; }
+}
+async function getPublicIP(){
+  try{ const r = await fetch('https://api.ipify.org?format=json'); if(!r.ok) throw 0; const j=await r.json(); return j.ip }catch(e){ return null }
+}
+async function testNetwork(){
+  $('netResult').textContent = 'กำลังทดสอบ...';
+  const cfg = LS('cb_settings')||{};
+  const lt = await tryLocalToken(cfg.localTokenUrl || $('localTokenUrl').value.trim());
+  if(lt.ok){ $('netResult').textContent='พบ Local token (เครือข่ายภายใน)'; return {ok:true, method:'local'} }
+  const ip = await getPublicIP();
+  if(ip){
+    const allowed = cfg.allowedPublic||$('allowedPublic').value;
+    if(allowed && allowed.split(',').map(s=>s.trim()).includes(ip)){ $('netResult').textContent = 'Public IP ตรงกับรายการที่อนุญาต'; return {ok:true, method:'public', ip} }
+    else $('netResult').textContent = 'Public IP: '+ip+' (ไม่ตรงรายการ)';
+  } else $('netResult').textContent = 'ไม่สามารถตรวจ IP ได้';
+  return {ok:false};
+}
+
+/* ---------- Login / Session ---------- */
+$('btnNetTest').addEventListener('click', async ()=> await testNetwork());
+
+$('btnSeed').addEventListener('click', ()=>{ localStorage.clear(); seed(); populateUserSelect(); toast('เติมข้อมูลตัวอย่างแล้ว'); location.reload(); });
+$('btnClear').addEventListener('click', ()=>{ if(confirm('ล้าง localStorage แล้วรีโหลด?')){ localStorage.clear(); location.reload(); } });
+
+$('btnCustomerPage').addEventListener('click', ()=> { showCustomer(); });
+
+$('btnLogin').addEventListener('click', async ()=>{
+  const id = $('empSelect').value, pw = $('empPw').value||'';
+  const users = LS('cb_users')||[]; const u = users.find(x=>x.id===id && x.pw===pw);
+  if(!u){ $('loginMsg').textContent='รหัสหรือรหัสผ่านไม่ถูกต้อง'; return; }
+  // save settings
+  LS('cb_settings', { localTokenUrl: $('localTokenUrl').value.trim(), allowedPublic: $('allowedPublic').value.trim() });
+  // gating
+  const gate = await testNetwork();
+  if(!gate.ok){ $('loginMsg').textContent='ปฏิเสธการเข้า: ไม่อยู่เครือข่ายที่อนุญาต'; return; }
+  // create session
+  const sess = { id:u.id, name:u.name, role:u.role, loginAt: (new Date()).toISOString(), network: gate.method||gate.ip };
+  LS('cb_sessions', sess);
+  renderTopControls();
+  renderByRole();
+});
+
+/* logout buttons */
+$('btnLogout')?.addEventListener('click', ()=> { LS('cb_sessions', null); renderTopControls(); renderByRole(); });
+$('btnMgrLogout')?.addEventListener('click', ()=> { LS('cb_sessions', null); renderTopControls(); renderByRole(); });
+
+function renderTopControls(){
+  const top = $('topControls'); top.innerHTML = '';
+  const s = LS('cb_sessions');
+  if(s){
+    const span = document.createElement('span'); span.textContent = `${s.name} (${s.id}) • ${s.role}`; top.appendChild(span);
+    const btn = document.createElement('button'); btn.className='btn-ghost'; btn.textContent='Go to Dashboard'; btn.onclick = ()=> renderByRole(); top.appendChild(btn);
+    const out = document.createElement('button'); out.className='btn-ghost'; out.textContent='Logout'; out.onclick = ()=> { LS('cb_sessions', null); renderTopControls(); renderByRole(); }; top.appendChild(out);
+  } else {
+    const a = document.createElement('button'); a.className='btn-ghost'; a.textContent='หน้า ลูกค้า (Order)'; a.onclick = showCustomer; top.appendChild(a);
+  }
+}
+renderTopControls();
+
+/* ---------- Render router by role ---------- */
+function renderByRole(){
+  const s = LS('cb_sessions');
+  // hide all dash
+  $('empDash').hidden = true; $('mgrDash').hidden = true;
+  if(!s) return;
+  if(s.role.toLowerCase()==='manager'){ renderManager(); } else { renderEmployee(); }
+}
+
+/* ---------- Employee functions ---------- */
+function renderEmployee(){
+  const s = LS('cb_sessions'); if(!s) return;
+  $('empDash').hidden = false;
+  $('empTitle').textContent = `${s.name} (${s.id})`;
+  $('empSub').textContent = `${s.role} • ${todayDisplay()}`;
+  $('empNetwork').textContent = `Net: ${s.network}`;
+  // check status
+  const tasks = LS('cb_tasks')||[];
+  const myTasks = tasks.filter(t=> t.assignee===s.id && !t.archived);
+  renderTaskList(myTasks);
+  renderDailyGoals(s.id);
+  renderFeedback(s.id);
+  renderPayrollBox(s.id);
+  // show saved notes if any
+  const rpt = LS('cb_reports')||[];
+  const myLastReport = rpt.find(r=> r.empId===s.id && r.date===new Date().toLocaleDateString('th-TH'));
+  $('workNotes').value = myLastReport ? (myLastReport.notes||'') : (LS('temp_notes_'+s.id) || '');
+  $('checkStatus').textContent = (myLastReport && myLastReport.checkedOut) ? `Checked-out ${myLastReport.time}` : 'ไม่ได้เช็คอิน/เช็คเอาท์';
+}
+
+/* render tasks for employee with edit / complete buttons */
+function renderTaskList(list){
+  const el = $('myTasks'); el.innerHTML = '';
+  if(!list.length) { el.innerHTML = '<div class="small">ไม่มีงาน</div>'; return; }
+  list.forEach(t=>{
+    const d = document.createElement('div'); d.className='task';
+    d.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:700">${t.title}</div>
+        <div class="small">${t.type || 'งานทั่วไป'} • มอบหมายโดย: ${t.createdBy || 'ระบบ'}</div>
+        <div class="small">สถานะ: <strong>${t.done? 'เสร็จแล้ว':'ยังไม่เสร็จ'}</strong></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <div class="row"><button class="btn-ghost" data-act="mark" data-id="${t.id}">${t.done? 'ยกเลิกเสร็จ':'ทำเสร็จ'}</button></div>
+        <div class="row"><button class="btn-ghost" data-act="edit" data-id="${t.id}">แก้ไข</button></div>
+      </div>
+    </div>
+    <div style="margin-top:8px" id="note_${t.id}">${t.note? `<div class="small">บันทึก: ${t.note}</div>` : ''}</div>`;
+    el.appendChild(d);
+  });
+}
+
+/* task actions */
+document.body.addEventListener('click', (ev)=>{
+  const act = ev.target.dataset.act;
+  const id = ev.target.dataset.id;
+  if(!act) return;
+  const tasks = LS('cb_tasks')||[]; const t = tasks.find(x=>x.id===id);
+  const session = LS('cb_sessions');
+  if(!t || !session) return;
+  if(act==='mark'){
+    t.done = !t.done;
+    if(t.done){
+      t.completedAt = new Date().toISOString();
+      // automatic note
+      t.note = (t.note||'') + `\nCompleted by ${session.name} at ${nowStr()}`;
+    } else {
+      delete t.completedAt;
+    }
+    LS('cb_tasks', tasks);
+    renderEmployee();
+    toast('อัปเดตสถานะงาน');
+  } else if(act==='edit'){
+    const newTitle = prompt('แก้ไขหัวข้องาน', t.title);
+    if(newTitle!==null){ t.title = newTitle; const newNote = prompt('บันทึก/หมายเหตุ (optional)', t.note||''); if(newNote!==null) t.note = newNote; LS('cb_tasks', tasks); renderEmployee(); toast('บันทึกแล้ว'); }
+  }
+});
+
+/* save notes */ 
+$('btnSaveNote').addEventListener('click', ()=>{
+  const s = LS('cb_sessions'); if(!s) { toast('ล็อกอินก่อน'); return; }
+  const txt = $('workNotes').value.trim();
+  LS('temp_notes_'+s.id, txt);
+  toast('บันทึกชั่วคราวแล้ว');
+});
+
+/* Check-out (send report) */
+$('btnCheckOut').addEventListener('click', ()=>{
+  const s = LS('cb_sessions'); if(!s) { toast('ล็อกอินก่อน'); return; }
+  // collect tasks done today for this employee
+  const tasks = LS('cb_tasks')||[]; const myTasks = tasks.filter(t=> t.assignee===s.id && (!t.reported || t.createdAt.includes(new Date().toLocaleDateString('th-TH'))));
+  const notes = $('workNotes').value.trim() || LS('temp_notes_'+s.id) || '';
+  // build report (summaries)
+  const per = myTasks.map(t=> `${t.title} • ${t.done? 'Done':'Pending'}`);
+  const report = {
+    id: 'R'+Date.now(),
+    date: new Date().toLocaleDateString('th-TH'),
+    time: nowStr(),
+    empId: s.id,
+    empName: s.name,
+    role: s.role,
+    network: s.network,
+    tasks: per,
+    notes,
+    checkedOut: true,
+    evaluated: false
+  };
+  const reports = LS('cb_reports')||[]; reports.unshift(report); LS('cb_reports', reports);
+  // mark tasks as reported so won't be re-sent
+  myTasks.forEach(t=> { t.reported = true; });
+  LS('cb_tasks', tasks);
+  // clear temp notes
+  localStorage.removeItem('temp_notes_'+s.id);
+  toast('ส่งรายงานไปหัวหน้าเรียบร้อย');
+  renderByRole();
+});
+
+/* Check-in just notes presence in payroll (we register one checkin per day) */
+$('btnCheckIn').addEventListener('click', ()=>{
+  const s = LS('cb_sessions'); if(!s) { toast('ล็อกอินก่อน'); return; }
+  // record payroll day
+  const payroll = LS('cb_payroll') || {};
+  const key = `${s.id}_${ new Date().toISOString().slice(0,10) }`;
+  payroll[key] = { empId: s.id, date: new Date().toLocaleDateString('th-TH'), time: nowStr() };
+  LS('cb_payroll', payroll);
+  toast('เช็คอินบันทึกแล้ว (ถูกนับเป็นวันจ้าง)');
+  renderEmployee();
+});
+
+/* ---------- Customer Orders ---------- */
+$('btnPlaceOrder').addEventListener('click', ()=>{
+  const menu = $('menuSelect').value;
+  const qty = parseInt($('menuQty').value) || 1;
+  const cust = $('custName').value.trim() || 'Guest';
+  // determine assignee by role
+  const role = (menu==='Cake' || menu==='Sandwich') ? 'Kitchen' : 'Barista';
+  const users = LS('cb_users')||[];
+  const candidates = users.filter(u=> u.role===role);
+  if(!candidates.length){ $('orderMsg').textContent='ไม่มีพนักงานในฝ่าย '+role; return; }
+  // round-robin assignment (simple)
+  const orders = LS('cb_orders')||[];
+  const last = orders[orders.length-1];
+  let assignee = candidates[0].id;
+  if(last){
+    const idx = candidates.findIndex(c=>c.id===last.assignee);
+    assignee = candidates[(idx+1) % candidates.length].id;
+  }
+  const order = {
+    id: 'O'+Date.now(),
+    menu, qty, cust,
+    assignedRole: role,
+    assignee,
+    createdAt: new Date().toISOString(),
+    status: 'pending'
+  };
+  orders.push(order); LS('cb_orders', orders);
+  // create task for assignee
+  const tasks = LS('cb_tasks')||[];
+  tasks.unshift({
+    id: 'T'+Date.now(),
+    title: `${menu} x${qty} (Order ${order.id}) for ${cust}`,
+    assignee: order.assignee,
+    type: role,
+    createdAt: new Date().toLocaleDateString('th-TH'),
+    createdBy: 'OrderSystem',
+    done: false,
+    reported: false
+  });
+  LS('cb_tasks', tasks);
+  $('orderMsg').textContent = `สั่งเรียบร้อย! งานมอบหมายให้ ${order.assignee} (${role})`;
+  renderEmployee(); // if logged in as that employee, shows updated tasks
+});
+
+/* view orders admin */
+$('btnViewOrders').addEventListener('click', ()=> {
+  $('ordersCard').hidden = false;
+  const orders = LS('cb_orders')||[]; $('ordersList').innerHTML = orders.map(o=> `<div style="border-bottom:1px dashed var(--line);padding:6px"><strong>${o.menu} x${o.qty}</strong> • ${o.cust} • assigned to ${o.assignee} • status: ${o.status}</div>`).join('') || '<div class="small">ไม่มี Order</div>';
+});
+$('btnHideOrders').addEventListener('click', ()=> $('ordersCard').hidden = true );
+
+/* ---------- Manager functions ---------- */
+function renderManager(){
+  $('mgrDash').hidden = false;
+  const s = LS('cb_sessions'); if(!s) return;
+  $('mgrSub').textContent = `${s.name} (${s.id}) • ${todayDisplay()}`;
+  renderInbox();
+  renderGoalManager();
+  renderPayrollAdmin();
+}
+
+/* Inbox of reports */
+function renderInbox(){
+  const inbox = LS('cb_reports')||[];
+  $('reportsInbox').innerHTML = inbox.map(r=> `
+    <div style="border-bottom:1px dashed var(--line);padding:8px">
+      <div style="font-weight:700">${r.empName} (${r.empId}) — ${r.date} ${r.time}</div>
+      <div class="small">เครือข่าย: ${r.network}</div>
+      <div style="margin-top:6px">${ r.tasks.map(t=> `<div class="small">• ${t}</div>`).join('') }</div>
+      <div style="margin-top:6px"><strong>Notes:</strong> ${ r.notes || '-' }</div>
+      <div style="margin-top:6px" class="row">
+        <button class="btn-ghost" data-act="markDone" data-id="${r.id}">ยืนยันงานเสร็จ</button>
+        <button class="btn-ghost" data-act="eval" data-id="${r.id}" data-emp="${r.empId}">ประเมิน / ให้ Feedback</button>
+      </div>
+      <div id="mgr_area_${r.id}"></div>
+    </div>
+  `).join('') || '<div class="small">ยังไม่มีรายงานจากพนักงาน</div>';
+}
+
+/* handle manager buttons in inbox (confirm/ evaluate) */
+document.body.addEventListener('click', (ev)=>{
+  if(ev.target.dataset.act==='markDone'){
+    const rid = ev.target.dataset.id;
+    const reps = LS('cb_reports')||[]; const idx = reps.findIndex(x=>x.id===rid);
+    if(idx>-1){ reps[idx].confirmed = true; LS('cb_reports', reps); toast('ยืนยันงานเรียบร้อย'); renderInbox(); renderByRole(); }
+  } else if(ev.target.dataset.act==='eval'){
+    const rid = ev.target.dataset.id; const emp = ev.target.dataset.emp;
+    showEvalForm(rid, emp);
+  }
+});
+
+/* evaluation form render */
+function showEvalForm(reportId, empId){
+  const area = $('mgr_area_'+reportId);
+  if(!area) return;
+  area.innerHTML = `
+    <div style="margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff">
+      <label class="small">คะแนนรวม (1-5)</label><input id="score_${reportId}" type="number" min="1" max="5" value="4">
+      <label class="small">ความตรงเวลา (1-5)</label><input id="punct_${reportId}" type="number" min="1" max="5" value="4">
+      <label class="small">การบริการ (1-5)</label><input id="srv_${reportId}" type="number" min="1" max="5" value="4">
+      <label class="small">ข้อเสนอแนะ</label><textarea id="sug_${reportId}"></textarea>
+      <label class="small">เป้าครั้งถัดไป (optional)</label><input id="next_${reportId}" placeholder="เช่น จัดโต๊ะเพิ่ม 5 รอบ">
+      <div class="row" style="margin-top:8px"><button class="btn-ghost" data-act="sendEval" data-report="${reportId}" data-emp="${empId}">ส่งผลประเมิน</button></div>
+    </div>
+  `;
+}
+
+/* send evaluation */
+document.body.addEventListener('click', (ev)=>{
+  if(ev.target.dataset.act==='sendEval'){
+    const reportId = ev.target.dataset.report; const empId = ev.target.dataset.emp;
+    const score = parseInt($('score_'+reportId).value||4);
+    const punctual = parseInt($('punct_'+reportId).value||4);
+    const service = parseInt($('srv_'+reportId).value||4);
+    const sug = $('sug_'+reportId).value||'';
+    const next = $('next_'+reportId).value||'';
+    const fbAll = LS('cb_feedback') || {};
+    const entry = { id:'F'+Date.now(), dateISO:new Date().toISOString(), score, punctual, service, suggestion:sug, nextGoals:next, manager: LS('cb_sessions')?.name || 'Manager' };
+    fbAll[empId] = fbAll[empId] || []; fbAll[empId].unshift(entry); LS('cb_feedback', fbAll);
+    // mark report evaluated
+    const reps = LS('cb_reports')||[]; const idx = reps.findIndex(r=>r.id===reportId); if(idx>-1){ reps[idx].evaluated = true; LS('cb_reports', reps); }
+    toast('ส่งผลประเมินให้พนักงานแล้ว');
+    renderInbox();
+  }
+});
+
+/* ---------- Goals edit by manager (appear under each employee report) ---------- */
+function renderGoalManager(){
+  const users = LS('cb_users')||[];
+  const box = $('manageGoals'); box.innerHTML = users.filter(u=>u.role!=='Manager').map(u=>{
+    const overrides = LS('cb_goalOverrides')||{};
+    const today = new Date().toLocaleDateString('th-TH');
+    const key = u.id;
+    const curr = (overrides[key] && overrides[key].date===today) ? overrides[key].goals : '';
+    return `<div style="border-bottom:1px dashed var(--line);padding:8px">
+      <div style="font-weight:700">${u.name} (${u.id})</div>
+      <div class="small">เป้าปัจจุบัน: ${ curr || '<i class="small">ยังไม่ระบุ</i>' }</div>
+      <div style="margin-top:6px">
+        <input id="goal_input_${u.id}" placeholder="พิมพ์เป้าหมายใหม่สำหรับวันนี้">
+        <div class="row" style="margin-top:6px">
+          <button class="btn-ghost" data-act="saveGoal" data-id="${u.id}">บันทึกเป้าหมาย</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* save goal override */
+document.body.addEventListener('click', (ev)=>{
+  if(ev.target.dataset.act==='saveGoal'){
+    const id = ev.target.dataset.id;
+    const val = $('goal_input_'+id).value.trim();
+    const overrides = LS('cb_goalOverrides')||{};
+    overrides[id] = { date: new Date().toLocaleDateString('th-TH'), goals: val };
+    LS('cb_goalOverrides', overrides);
+    toast('บันทึกเป้าหมายแล้ว');
+    renderGoalManager(); renderInbox();
+  }
+});
+
+/* show daily goals below employee report for employee view */
+function renderDailyGoals(empId){
+  const overrides = LS('cb_goalOverrides')||{};
+  const g = overrides[empId] && overrides[empId].date===new Date().toLocaleDateString('th-TH') ? overrides[empId].goals : '';
+  $('dailyGoals').innerHTML = g ? `<div>${g}</div>` : `<div class="small">ยังไม่มีเป้าจากหัวหน้า</div>`;
+}
+
+/* ---------- Feedback rendering for employee ---------- */
+function renderFeedback(empId){
+  const fbAll = LS('cb_feedback')||{};
+  const list = fbAll[empId] || [];
+  $('myFeedback').innerHTML = list.map(f=> `<div style="border-bottom:1px dashed var(--line);padding:6px"><div class="small">${new Date(f.dateISO).toLocaleDateString('th-TH')} ${new Date(f.dateISO).toLocaleTimeString('th-TH')} • ${f.manager}</div><div><strong>คะแนน:</strong> ${f.score}/5</div><div><strong>ข้อเสนอแนะ:</strong> ${f.suggestion||'-'}</div><div class="small">เป้าครั้งถัดไป: ${f.nextGoals||'-'}</div></div>`).join('') || '<div class="small">ยังไม่มีผลประเมิน</div>';
+}
+
+/* ---------- Payroll: monthly summary ---------- */
+function renderPayrollBox(empId){
+  const payroll = LS('cb_payroll')||{};
+  // count checkin days for current month for empId
+  const entries = Object.values(payroll).filter(e=> e.empId===empId && new Date(e.date).getMonth()=== new Date().getMonth());
+  const days = entries.length;
+  const users = LS('cb_users')||[]; const u = users.find(x=>x.id===empId); const wage = u?.dailyWage || 200;
+  // evaluate average score this month
+  const fbAll = LS('cb_feedback')||{}; const list = fbAll[empId] || [];
+  const month = new Date().getMonth();
+  const monthFB = list.filter(f=> new Date(f.dateISO).getMonth()===month );
+  const avgScore = monthFB.length ? (monthFB.reduce((s, x)=> s + (x.score||0), 0) / monthFB.length) : 0;
+  // bonus rule: avg score >=4 -> bonus 2000
+  const bonus = avgScore >=4 && monthFB.length ? 2000 : 0;
+  const total = days * wage + bonus;
+  $('payrollBox').innerHTML = `<div>วันทำงาน (เดือนนี้): ${days} วัน<br>ค่าจ้าง/วัน: ${wage} บาท<br>โบนัส (ถ้ามี): ${bonus} บาท<br><strong>รวม: ${total} บาท</strong><div class="small">คะแนนเฉลี่ยเดือนนี้: ${avgScore? avgScore.toFixed(2):'-'}</div></div>`;
+}
+
+/* Manager payroll admin view */
+function renderPayrollAdmin(){
+  const users = LS('cb_users')||[];
+  const payroll = LS('cb_payroll')||{};
+  const rows = users.map(u=>{
+    if(u.role==='Manager') return '';
+    // count days
+    const entries = Object.values(payroll).filter(e=> e.empId===u.id && new Date(e.date).getMonth()===new Date().getMonth());
+    const days = entries.length;
+    const wage = u.dailyWage || 200;
+    // avg eval
+    const fbAll = LS('cb_feedback')||{}; const list = fbAll[u.id]||[]; const monthFB = list.filter(f=> new Date(f.dateISO).getMonth()===new Date().getMonth());
+    const avg = monthFB.length ? (monthFB.reduce((s,x)=>s+(x.score||0),0)/monthFB.length) : 0;
+    const bonus = avg>=4 && monthFB.length ? 2000 : 0;
+    const total = days*wage + bonus;
+    return `<div style="border-bottom:1px dashed var(--line);padding:8px"><strong>${u.name} (${u.id})</strong><div class="small">Days: ${days} • Wage/day: ${wage} • Bonus: ${bonus} • Total: ${total}</div></div>`;
+  }).join('');
+  $('payrollAdmin').innerHTML = rows || '<div class="small">ไม่มีข้อมูล</div>';
+}
+
+/* ---------- Render reports inbox initially ---------- */
+function renderInbox(){
+  renderInbox(); // placeholder ensure exists
+}
+
+/* ---------- Initial render checks ---------- */
+renderTopControls();
+renderByRole();
+
+/* expose some functions to window for debugging */
+window._demo = { LS, renderByRole, renderManager, renderEmployee, testNetwork };
+</script>
+</body>
+</html>
