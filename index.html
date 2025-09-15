@@ -666,13 +666,13 @@ function renderPayrollAdmin(){
 }
 
 /* ---------- Render reports inbox initially ---------- */
-function renderInbox(){
-  renderInbox(); // placeholder ensure exists
-}
+// เรียกเพื่อเรนเดอร์ inbox ตอนโหลด (เรียกครั้งเดียว)
+renderInbox();
 
 /* ---------- Initial render checks ---------- */
 renderTopControls();
 renderByRole();
+
 
 /* expose some functions to window for debugging */
 window._demo = { LS, renderByRole, renderManager, renderEmployee, testNetwork };
